@@ -32,7 +32,7 @@ jobs:
 
       - name: get version using github commit
         run: |
-          echo "APP_VERSION=${github.sha::9}" >> "$GITHUB_ENV"
+          echo "APP_VERSION=${GITHUB_SHA::9}" >> "$GITHUB_ENV"
           # if stored in github env, it can be used across steps
 
       - name: docker build
