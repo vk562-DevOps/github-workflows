@@ -12,14 +12,14 @@ on:
         required: true
         type: string
 env:
-  ACC_ID: 055610219795
+  ACC_ID: "055610219795"
 
 jobs:
   feature-nodejs-pipeline:
     runs-on: self-hosted
     steps:
       - name: Checkout # git checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: install dependencies # install necessary dependencies
         run: npm install
@@ -40,7 +40,7 @@ jobs:
           docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION} .
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v6.3.0
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
