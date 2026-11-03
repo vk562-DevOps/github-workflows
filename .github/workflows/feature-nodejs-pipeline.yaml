@@ -48,5 +48,6 @@ jobs:
 
       - name: push docker image to ECR
         run: |
+          # yamllint disable-line rule:line-length
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
           docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION}
