@@ -20,3 +20,9 @@ jobs:
 
       - name: install dependencies # install necessary dependencies
         run: npm install
+
+      - name: checking input values
+        run: |
+          echo "component is ${{ inputs.component }}"
+          echo "project is ${{ inputs.project }}"
+          echo "environment is ${{ inputs.environment }}"
