@@ -46,10 +46,11 @@ jobs:
           FAILED=0
 
           for CONTEXT in "${REQUIRED_CONTEXTS[@]}"; do
+            # Forces both GitHub context and array variable to lowercase during selection
             STATE=$(echo "$RESPONSE" | jq -r \
-              ".[] | select(.context == \"$CONTEXT\") | .state" | head -n 1)
+              ".[] | select((.context | ascii_downcase) == \"${CONTEXT,,}\") | .state" | head -n 1)
 
-            if [ -z "$STATE" ]; then
+            if [ -z "$STATE" ] || [ "$STATE" = "null" ]; then
               echo "❌ $CONTEXT → status missing"
               FAILED=1
             elif [ "$STATE" != "success" ]; then
