@@ -16,7 +16,7 @@ env:
 
 jobs:
   feature-nodejs-pipeline:
-    runs-on: [self-hosted, Linux, X64]
+    runs-on: self-hosted
     steps:
       - name: Checkout # git checkout
         uses: actions/checkout@v4
