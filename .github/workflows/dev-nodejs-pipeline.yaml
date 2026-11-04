@@ -1,0 +1,133 @@
+name: dev-nodejs-pipeline
+on:
+  workflow_call: # this workflow will be called and used
+    inputs:
+      component:
+        required: true
+        type: string
+      project:
+        required: true
+        type: string
+      environment:
+        required: true
+        type: string
+env:
+  ACC_ID: "055610219795"
+
+jobs:
+  dev-nodejs-pipeline:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout # git checkout
+        uses: actions/checkout@v4
+
+      - name: install dependencies # install necessary dependencies
+        run: npm install
+
+      # - name: checking input values
+      #   run: |
+      #     echo "component is ${{ inputs.component }}"
+      #     echo "project is ${{ inputs.project }}"
+      #     echo "environment is ${{ inputs.environment }}"
+
+      - name: get version using github commit
+        run: |
+          echo "APP_VERSION=${GITHUB_SHA::9}" >> "$GITHUB_ENV"
+          # if stored in github env, it can be used across steps
+
+      - name: unit tests
+        id: unit_tests
+        run: |
+          echo "executing unit tests"
+
+      - name: Update unit tests status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.unit_tests.outcome }} # success / failure / cancelled
+          context: UNIT_TESTS
+          description: ${{ steps.unit_tests.outcome }}
+
+      - name: docker build
+        id: docker_build
+        run: |
+          docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION} .
+
+      - name: Update docker build status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.docker_build.outcome }} # success / failure / cancelled
+          context: docker_build
+          description: ${{ steps.docker_build.outcome }}
+
+      - name: Security Check (Dependabot + Trivy)
+        id: security_check
+        # env:
+        #   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
+        run: |
+
+          echo "🔍 Running Trivy scan..."
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL,MEDIUM \
+            --pkg-types os \
+            --exit-code 1 \
+            --format table \
+            ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION}
+
+          TRIVY_RESULT=$?
+
+          if [ "$TRIVY_RESULT" -ne 0 ]; then
+          echo "❌ Trivy found vulnerabilities (HIGH/CRITICAL/MEDIUM)"
+          exit 1
+          fi
+
+          echo "✅ Trivy scan passed without blocking issues."
+
+      - name: Update security status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.security_check.outcome }} # success / failure / cancelled
+          context: security_check
+          description: ${{ steps.security_check.outcome }}
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: push docker image to ECR
+        run: |
+          aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
+          docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION}
+
+      - name: authenticate to EKS
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name roboshop-dev
+          kubectl get nodes
+
+      - name: checkout catalogue deploy repo
+        uses: actions/checkout@v6
+        with:
+          repository: vk562-DevOps/catalogue-deploy-gh-actions
+
+      - name: deploy to DEV cluster
+        id: dev_deploy
+        run: "helm upgrade --install ${{ inputs.component}} -f values-${{ inputs.environment }}.yaml -n ${{ inputs.project }} --set deployment.imageVersion=${APP_VERSION} --atomic --wait --timeout=5m ."
+
+      - name: Update DEV Deploy status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.dev_deploy.outcome }} # success / failure / cancelled
+          context: DEV_DEPLOY
+          description: ${{ steps.dev_deploy.outcome }}
