@@ -35,6 +35,10 @@ jobs:
           echo "APP_VERSION=${GITHUB_SHA::9}" >> "$GITHUB_ENV"
           # if stored in github env, it can be used across steps
 
+      - name: unit tests
+        run: |
+          echo "executing unit tests"
+
       - name: docker build
         run: |
           docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION} .
@@ -48,6 +52,5 @@ jobs:
 
       - name: push docker image to ECR
         run: |
-          # yamllint disable-line rule:line-length
           aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
           docker push ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION}
