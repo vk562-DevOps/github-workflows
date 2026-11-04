@@ -48,10 +48,11 @@ jobs:
           FAILED=0
 
           for CONTEXT in "${REQUIRED_CONTEXTS[@]}"; do
+            # Convert context value from API to lowercase before comparing
             STATE=$(echo "$RESPONSE" | jq -r \
-              ".[] | select(.context == \"$CONTEXT\") | .state" | head -n 1)
+              ".[] | select((.context | ascii_downcase) == \"${CONTEXT,,}\") | .state" | head -n 1)
 
-            if [ -z "$STATE" ]; then
+            if [ -z "$STATE" ] || [ "$STATE" = "null" ]; then
               echo "❌ $CONTEXT → status missing"
               FAILED=1
             elif [ "$STATE" != "success" ]; then
@@ -67,7 +68,7 @@ jobs:
             exit 1
           fi
 
-          echo "🎉 All required checks passed"
+            echo "🎉 All required checks passed"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v5.1.1
