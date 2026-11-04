@@ -36,12 +36,62 @@ jobs:
           # if stored in github env, it can be used across steps
 
       - name: unit tests
+        id: unit_tests
         run: |
           echo "executing unit tests"
 
+      - name: Update unit tests status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status/action.yaml@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.unit_tests.outcome }} # success / failure / cancelled
+          context: UNIT_TESTS
+          description: ${{ steps.unit_tests.outcome }}
+
       - name: docker build
+        id: docker_build
         run: |
           docker build -t ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION} .
+
+      - name: Update docker build status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status/action.yaml@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.docker_build.outcome }} # success / failure / cancelled
+          context: docker_build
+          description: ${{ steps.docker_build.outcome }}
+
+      - name: Security Check (Dependabot + Trivy)
+        id: security_check
+        # env:
+        #   GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
+        run: |
+
+          echo "🔍 Running Trivy scan..."
+          trivy image \
+            --scanners vuln \
+            --severity HIGH,CRITICAL,MEDIUM \
+            --pkg-types os \
+            --exit-code 1 \
+            --format table \
+            ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com/${{ inputs.project }}/${{ inputs.component }}:${APP_VERSION}
+
+          TRIVY_RESULT=$?
+
+          if [ "$TRIVY_RESULT" -ne 0 ]; then
+            echo "❌ Trivy found vulnerabilities (HIGH/CRITICAL/MEDIUM)"
+
+      - name: Update docker build status
+        if: always()
+        uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status/action.yaml@main
+        with:
+          sha: ${{ github.sha }}
+          state: ${{ steps.security_check.outcome }} # success / failure / cancelled
+          context: security_check
+          description: ${{ steps.security_check.outcome }}
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
