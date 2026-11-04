@@ -34,10 +34,10 @@ jobs:
           echo "🔍 Checking commit statuses for ${{ inputs.version }}"
 
           REQUIRED_CONTEXTS=(
-            "DEV_DEPLOY"
-            "DOCKER_BUILD"
-            "UNIT_TESTS"
-            "SECURITY_CHECK"
+            "dev_deploy"
+            "docker_build"
+            "unit_tests"
+            "security_check"
           )
 
           RESPONSE=$(curl -s \
