@@ -82,7 +82,11 @@ jobs:
           TRIVY_RESULT=$?
 
           if [ "$TRIVY_RESULT" -ne 0 ]; then
-            echo "❌ Trivy found vulnerabilities (HIGH/CRITICAL/MEDIUM)"
+          echo "❌ Trivy found vulnerabilities (HIGH/CRITICAL/MEDIUM)"
+          exit 1
+          fi
+
+          echo "✅ Trivy scan passed without blocking issues."
 
       - name: Update docker build status
         if: always()
