@@ -88,7 +88,7 @@ jobs:
 
           echo "✅ Trivy scan passed without blocking issues."
 
-      - name: Update docker build status
+      - name: Update security status
         if: always()
         uses: vk562-DevOps/github-workflows/.github/actions/update-commit-status@main
         with:
