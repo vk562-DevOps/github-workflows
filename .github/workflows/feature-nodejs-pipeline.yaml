@@ -14,9 +14,6 @@ on:
 env:
   ACC_ID: "055610219795"
 
-permissions:
-  statuses: write
-
 jobs:
   feature-nodejs-pipeline:
     runs-on: self-hosted
